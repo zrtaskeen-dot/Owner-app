@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'forgot_password.dart';
-import 'owner_dashboard_screen.dart'; // 👈 adjust this path if OwnerDashboardScreen lives elsewhere
+import 'owner_dashboard_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // ── Theme (app's existing palette) ──
+  // Theme 
   static const Color bgColor = Color(0xFFFCF8DD);
   static const Color themeColor = Color(0xFFA70000);
   static const Color creamColor = Color(0xFFFEF9E7);
@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 🔴 EMAIL & PASSWORD SIGN IN (Owner only)
+  //EMAIL and PASSWORD SIGN IN
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -179,10 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 22),
 
-                      // 👈 CHANGED: minimal underline-style fields (icon +
-                      // bottom border only) — matches the reference design's
-                      // clean, uncluttered login form instead of filled
-                      // pill inputs.
                       _buildUnderlineField(
                         controller: _emailController,
                         label: 'Email address',
@@ -236,8 +232,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 18),
 
-                      // 👈 CHANGED: login button ab maroon (themeColor)
-                      // background ke sath, text/spinner cream color mein.
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -281,9 +275,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                // Owner sign-up flow not wired here —
-                                // hook this up to your owner sign-up screen
-                                // if/when you have one.
                               },
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
@@ -313,16 +304,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ── Reference-style header: back arrow, small logo badge, greeting text ──
-  // 👈 CHANGED: maroon/light-maroon wavy ribbon behind the logo removed —
-  // header now sits on the plain bgColor background.
+  //  Reference style header
   Widget _buildWaveHeader(BuildContext context) {
     return SizedBox(
       height: 190,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // ── Foreground content ──
+          // Foreground content
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Column(

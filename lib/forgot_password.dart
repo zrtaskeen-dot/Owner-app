@@ -14,7 +14,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   bool _isLoading = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 👈 App ka standard theme (checkout/delivery screens jaisa)
   static const bg = Color(0xFFFCF8DD);
   static const primary = Color(0xFFA70000);
   static const creamText = Color(0xFFFEF9E7);
@@ -33,9 +32,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      _snack('✅ Password reset email sent to $email');
+      _snack(' Password reset email sent to $email');
 
-      // Optional: Navigate back to login screen after short delay
+    
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
