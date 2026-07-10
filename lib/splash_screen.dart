@@ -113,10 +113,6 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  // ✅ Agar owner already logged in hai (Firebase Auth session zinda hai),
-  // to seedha Dashboard pe le jao — Login screen dobara nahi dikhani.
-  // Firebase Auth apne aap session device pe persist karta hai, is liye
-  // yeh sirf ek check hai, kuch save/load manually karne ki zaroorat nahi.
   void _goToNextScreen() {
     final user = FirebaseAuth.instance.currentUser;
 

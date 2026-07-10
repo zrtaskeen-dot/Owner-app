@@ -37,24 +37,18 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnap) {
-        // Firebase abhi check kar raha hai ke persisted session hai ya nahi
         if (authSnap.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
 
         final user = authSnap.data;
 
-        // Koi session nahi mili → Login screen
         if (user == null) {
           return const LoginScreen(
             role: 'owner',
             allowSignup: false,
           );
         }
-
-        // Session mili — lekin owner role + emailVerified dobara verify karein
-        // (login.dart wale checks yahan bhi zaroori hain, kyunke authStateChanges
-        // sirf ye batata hai ke Firebase login hai, role/verification nahi)
         return FutureBuilder<DocumentSnapshot>(
           future: FirebaseFirestore.instance
               .collection('users')
@@ -70,7 +64,6 @@ class AuthGate extends StatelessWidget {
                 doc != null && doc.exists && doc['role'] == 'owner';
 
             if (!user.emailVerified || !isOwner) {
-              // Ghalat role ya unverified — sign out kar ke Login par bhej dein
               FirebaseAuth.instance.signOut();
               return const LoginScreen(
                 role: 'owner',

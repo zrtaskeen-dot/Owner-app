@@ -93,7 +93,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon badge (jaisa app ke option cards mein hota hai)
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(18),

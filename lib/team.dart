@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../logic/team_logic.dart'; // Check this path matches your project
+import '../logic/team_logic.dart'; 
 
 class TeamTab extends StatelessWidget {
   const TeamTab({Key? key}) : super(key: key);
 
-  // ── Palette: Cream Background + Maroon Cards + Cream Accent Icons ──
+  // Palette
   static const bgColor = Color(0xFFFCF8DD);
-  static const cardColor = Color(0xFFA70000); // Brand Maroon Card Background (unified)
-  static const creamAccent = Color(0xFFFFFDF0); // Cream / Ivory for icons & badges
-  static const maroon = Color(0xFFA70000); // unified brand maroon
+  static const cardColor = Color(0xFFA70000); 
+  static const creamAccent = Color(0xFFFFFDF0); 
+  static const maroon = Color(0xFFA70000); 
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
 
@@ -70,7 +70,6 @@ class TeamTab extends StatelessWidget {
     );
   }
 
-  // ── Helper that builds the filtered team list ──
   Widget _buildTeamList(List<QueryDocumentSnapshot> docs) {
     final filteredDocs = docs.where((doc) {
       var data = doc.data() as Map<String, dynamic>;
@@ -108,7 +107,7 @@ class TeamTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: cardColor, // Maroon Card Background
+        color: cardColor, 
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
       ),
@@ -118,10 +117,10 @@ class TeamTab extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: const BoxDecoration(
-              color: creamAccent, // Cream Circle Background
+              color: creamAccent, 
               shape: BoxShape.circle,
             ),
-            child: Icon(roleIcon, color: cardColor, size: 24), // Maroon Icon inside Cream Circle
+            child: Icon(roleIcon, color: cardColor, size: 24), 
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -174,9 +173,7 @@ class TeamTab extends StatelessWidget {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // HEADER (icon ab BLACK hai — pehle maroon tha)
-  // ════════════════════════════════════════════════════════════
+  // HEADER 
   Widget _tabHeader(String title, String subtitle, IconData icon) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),

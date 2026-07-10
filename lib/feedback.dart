@@ -21,25 +21,21 @@ class _ReviewDisplayInfo {
 class _FeedbackTabState extends State<FeedbackTab> {
   final FeedbackService _feedbackService = FeedbackService();
 
-  // caches so we don't re-query Firestore for the same order/branch repeatedly
   final Map<String, String> _nameCache = {};
   final Map<String, Future<String>> _branchNameFutures = {};
 
-  int? _ratingFilter; // null = All
+  int? _ratingFilter; 
   _TimeFilter _timeFilter = _TimeFilter.allTime;
 
-  // ── Theme — Cream background + Light Ivory Cards + Maroon Accent ──
+  // Theme 
   static const bgColor = Color(0xFFFCF8DD);
-  static const cardColor = Color(0xFFFFFFF0); // light ivory/cream card
-  static const maroon = Color(0xFFA70000); // brand maroon (accents only) — unified
-  static const gold = Color(0xFFFFC107); // attractive gold for stars
+  static const cardColor = Color(0xFFFFFFF0); 
+  static const maroon = Color(0xFFA70000); 
+  static const gold = Color(0xFFFFC107); 
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
   static const borderColor = Color(0xFFEDE6D6);
 
-  // ════════════════════════════════════════════════════════════
-  // Combined lookup: customerName (via orderId) + branchName (via branchId)
-  // ════════════════════════════════════════════════════════════
   Future<_ReviewDisplayInfo> _loadReviewInfo(FeedbackModel f) async {
     final orderInfo = await _feedbackService.getOrderInfo(f.orderId);
     final customerName = (orderInfo['customerName'] ?? 'Anonymous');
@@ -114,9 +110,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // HEADER — ab Team tab jesa structure (icon black + title + subtitle)
-  // ════════════════════════════════════════════════════════════
+  // HEADER 
   Widget _tabHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),

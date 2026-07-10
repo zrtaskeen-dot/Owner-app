@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'forgot_password.dart';
-import 'owner_dashboard_screen.dart'; 
+import 'owner_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -29,10 +30,28 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   // Theme 
-  static const Color bgColor = Color(0xFFFCF8DD);
+  static const bgColor = Colors.white;
   static const Color themeColor = Color(0xFFA70000);
   static const Color creamColor = Color(0xFFFEF9E7);
-  static const Color fieldColor = Color(0xFFFFFFF0);
+  static const Color fieldColor = Color(0xFFFFFDFA);
+
+  static final RegExp _emailRegex = RegExp(
+    r'^[a-zA-Z0-9]+([._%+\-][a-zA-Z0-9]+)*@(gmail|yahoo|hotmail|outlook)\.com$',
+    caseSensitive: false,
+  );
+
+  static final List<TextInputFormatter> _emailInputFormatters = [
+    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._%+\-@]')),
+  ];
+
+  String? _validateEmail(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return 'Enter your email';
+    if (!_emailRegex.hasMatch(v)) {
+      return 'Use a valid Gmail, Yahoo, Hotmail or Outlook email';
+    }
+    return null;
+  }
 
   @override
   void dispose() {
@@ -49,7 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: themeColor),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: themeColor,
+          ),
         ),
         content: Text(message, style: const TextStyle(color: Colors.black87)),
         actions: [
@@ -65,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  //EMAIL and PASSWORD SIGN IN
+  // EMAIL & PASSWORD 
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -101,13 +123,23 @@ class _LoginScreenState extends State<LoginScreen> {
         _showAlertDialog(
           "Account Not Found",
           "No account record was found for this user.\n\n"
-              "Please contact the administrator.",
+              "Please contact the admin.",
         );
         return;
       }
 
-      final role = doc['role'];
-      if (role != 'owner') {
+      final roleId = (doc.data()?['roleId'] ?? '').toString();
+
+      String roleName = '';
+      if (roleId.isNotEmpty) {
+        final roleDoc = await FirebaseFirestore.instance
+            .collection('user_role')
+            .doc(roleId)
+            .get();
+        roleName = (roleDoc.data()?['rolename'] ?? '').toString();
+      }
+
+      if (roleName.trim().toLowerCase() != 'owner') {
         await FirebaseAuth.instance.signOut();
         _showAlertDialog(
           "Access Denied",
@@ -117,10 +149,29 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'emailVerified': true});
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+        {'emailVerified': true},
+      );
+
+      //  activity log
+      try {
+        final ownerName =
+            (doc.data()?['name'] ??
+                    doc.data()?['full_name'] ??
+                    user.email ??
+                    'Owner')
+                .toString();
+
+        await FirebaseFirestore.instance.collection("system_logs").add({
+          'action': 'Owner Login',
+          'performedBy': ownerName,
+          'role': 'Owner',
+          'details': 'Owner "$ownerName" logged in to the system',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint('Owner login log failed: $e');
+      }
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -184,9 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         label: 'Email address',
                         icon: Icons.person_outline_rounded,
                         keyboardType: TextInputType.emailAddress,
-                        validator: (v) => v == null || !v.contains('@')
-                            ? 'Enter valid email'
-                            : null,
+                        inputFormatters: _emailInputFormatters,
+                        validator: _validateEmail,
                       ),
                       const SizedBox(height: 22),
                       _buildUnderlineField(
@@ -233,8 +283,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 18),
 
                       SizedBox(
-                        width: double.infinity,
-                        height: 54,
+                        width: 220,
+                        height: 50,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _signIn,
                           style: ElevatedButton.styleFrom(
@@ -275,12 +325,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             TextButton(
                               onPressed: () {
+
                               },
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
                                 minimumSize: Size.zero,
-                                tapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: const Text(
                                 "Sign up",
@@ -304,14 +354,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  //  Reference style header
   Widget _buildWaveHeader(BuildContext context) {
     return SizedBox(
       height: 190,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Foreground content
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Column(
@@ -323,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -344,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -392,25 +440,39 @@ class _LoginScreenState extends State<LoginScreen> {
     bool obscureText = false,
     Widget? suffixIcon,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
   }) {
+
+    OutlineInputBorder box(Color color, [double width = 1.0]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: TextStyle(fontWeight: FontWeight.w500, color: Colors.brown.shade900),
+      inputFormatters: inputFormatters,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: Colors.black87,
+      ),
       validator: validator,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: themeColor, size: 20),
         suffixIcon: suffixIcon,
         labelText: label,
-        labelStyle: TextStyle(color: Colors.brown.shade300, fontSize: 13),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.brown.shade200, width: 1.2),
+        labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
+        filled: true,
+        fillColor: fieldColor,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
         ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: themeColor, width: 1.8),
-        ),
+        border: box(Colors.black38),
+        enabledBorder: box(Colors.black38),
+        focusedBorder: box(themeColor, 1.6),
       ),
     );
   }

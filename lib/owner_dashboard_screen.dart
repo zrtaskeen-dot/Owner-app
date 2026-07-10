@@ -21,16 +21,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   String? _selectedBranchId;
   String _selectedBranchName = 'All Branches';
 
-  // ── Custom date range filter (null = All Time / no filter) ──
+  // Custom date range filter 
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
 
-  // ── Palette: Cream Background + Ivory Cards (#FFFFF0) + Maroon Outlines ──
+  // Palette
   static const bgColor = Color(0xFFFCF8DD);
   static const cardColor = Color(
     0xFFFFFFF0,
-  ); // Light cream / Ivory card background
-  static const maroon = Color(0xFFA70000); // Brand maroon (unified across app)
+  ); 
+  static const maroon = Color(0xFFA70000); 
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
 
@@ -58,9 +58,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // BOTTOM NAVIGATION (background + selected/unselected icons: maroon)
-  // ════════════════════════════════════════════════════════════
+  // BOTTOM NAVIGATION 
   Widget _buildBottomNav() {
     const items = [
       {'icon': Icons.dashboard_rounded, 'label': 'Dashboard'},
@@ -130,9 +128,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
   // BRANCH DROPDOWN HEADER
-  // ════════════════════════════════════════════════════════════
   Widget _buildBranchHeader() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -293,9 +289,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // DATE RANGE FILTER (replaces Today/Week/Month/All chips)
-  // ════════════════════════════════════════════════════════════
+  // DATE RANGE FILTER 
   bool get _hasCustomRange => _rangeStart != null && _rangeEnd != null;
 
   String _formatDate(DateTime d) {
@@ -340,10 +334,6 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     return !dt.isBefore(startOfDay) && !dt.isAfter(endOfDay);
   }
 
-  // Orders may store their date under different field names depending on
-  // how they were created — this checks the common ones so the filter
-  // works regardless. If your orders use a different field name, add it
-  // to this list.
   DateTime? _extractOrderDate(Map<String, dynamic> d) {
     final raw =
         d['createdAt'] ??
@@ -363,8 +353,6 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     });
   }
 
-  // Single, themed date picker restricted so no future date (tomorrow
-  // onward) can ever be picked.
   Future<DateTime?> _showThemedDatePicker(DateTime initial) {
     final today = DateTime.now();
     final safeInitial = initial.isAfter(today) ? today : initial;
@@ -439,8 +427,6 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // Compact, app-themed bottom sheet with two simple date fields — no
-  // giant calendar and no connecting bar between the start/end dates.
   void _openCustomRangeSheet() {
     DateTime? tempStart = _rangeStart;
     DateTime? tempEnd = _rangeEnd;

@@ -5,10 +5,10 @@ import '../repository/activity_log_repository.dart';
 class ActivityLogTab extends StatelessWidget {
   const ActivityLogTab({Key? key}) : super(key: key);
 
-  // ── Palette: Cream Background + Ivory Cards + Maroon Accents (Matching Dashboard) ──
-  static const bgColor = Color(0xFFFCF8DD);      // Cream background
-  static const cardColor = Color(0xFFFFFFF0);    // Ivory / light cream cards
-  static const maroon = Color(0xFFA70000);       // Brand maroon (role badge, accents)
+  //  Palette
+  static const bgColor = Color(0xFFFCF8DD);     
+  static const cardColor = Color(0xFFFFFFF0);    
+  static const maroon = Color(0xFFA70000);       
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
 
