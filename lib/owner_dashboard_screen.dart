@@ -632,9 +632,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // DASHBOARD TAB
-  // ════════════════════════════════════════════════════════════
+
   Widget _buildDashboardTab() {
     return StreamBuilder<QuerySnapshot>(
       stream: _controller.ordersStream,
