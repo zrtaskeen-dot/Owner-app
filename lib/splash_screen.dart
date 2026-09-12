@@ -1,0 +1,349 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'login.dart';
+import 'owner_dashboard_screen.dart';
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  static const maroon = Color(0xFFA70000);
+  static const maroonDark = Color(0xFF6E0000);
+  static const cream = Color(0xFFFCF8DD);
+  static const ivory = Color(0xFFFFFFF0);
+  static const gold = Color(0xFFFFC107);
+
+  late final AnimationController _controller;
+  late final AnimationController _dotsController;
+
+  late final Animation<double> _bgFade;
+  late final Animation<double> _glowFade;
+  late final Animation<double> _logoScale;
+  late final Animation<double> _logoFade;
+  late final Animation<double> _foldSize;
+  late final Animation<Offset> _titleSlide;
+  late final Animation<double> _titleFade;
+  late final Animation<double> _dotsFade;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    );
+
+    _dotsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+
+    _bgFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
+
+    _glowFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.05, 0.45, curve: Curves.easeOut),
+      ),
+    );
+
+    _logoScale = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.45, curve: Curves.elasticOut),
+      ),
+    );
+
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.25, curve: Curves.easeIn),
+      ),
+    );
+
+    _foldSize = Tween<double>(begin: 0.0, end: 30.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.25, 0.55, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.4, 0.7, curve: Curves.easeOutCubic),
+          ),
+        );
+
+    _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeIn),
+      ),
+    );
+
+    _dotsFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.6, 0.85, curve: Curves.easeIn),
+      ),
+    );
+
+    _controller.forward();
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        Future.delayed(const Duration(milliseconds: 450), () {
+          if (!mounted) return;
+          _goToNextScreen();
+        });
+      }
+    });
+  }
+
+  // ✅ Agar owner already logged in hai (Firebase Auth session zinda hai),
+  // to seedha Dashboard pe le jao — Login screen dobara nahi dikhani.
+  // Firebase Auth apne aap session device pe persist karta hai, is liye
+  // yeh sirf ek check hai, kuch save/load manually karne ki zaroorat nahi.
+  void _goToNextScreen() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (_, animation, __) => FadeTransition(
+          opacity: animation,
+          child: user != null
+              ? const OwnerDashboardScreen()
+              : const LoginScreen(role: 'owner', allowSignup: false),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _dotsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: maroon,
+      body: Stack(
+        children: [
+          FadeTransition(
+            opacity: _bgFade,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [maroon, maroonDark],
+                ),
+              ),
+            ),
+          ),
+          FadeTransition(
+            opacity: _glowFade,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -70,
+                  left: -60,
+                  child: _glowCircle(220, cream.withOpacity(0.10)),
+                ),
+                Positioned(
+                  bottom: -90,
+                  right: -70,
+                  child: _glowCircle(260, gold.withOpacity(0.14)),
+                ),
+              ],
+            ),
+          ),
+          Center(
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_controller, _dotsController]),
+              builder: (context, child) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Opacity(
+                      opacity: _logoFade.value,
+                      child: Transform.scale(
+                        scale: _logoScale.value,
+                        child: _buildLogoCard(),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    SlideTransition(
+                      position: _titleSlide,
+                      child: Opacity(
+                        opacity: _titleFade.value,
+                        child: const Text(
+                          'Kentucky',
+                          style: TextStyle(
+                            color: cream,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Opacity(
+                      opacity: _dotsFade.value,
+                      child: _buildLoadingDots(),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _glowCircle(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, color.withOpacity(0.0)]),
+      ),
+    );
+  }
+
+  Widget _buildLoadingDots() {
+    return SizedBox(
+      height: 10,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (i) {
+          final delay = i * 0.2;
+          final t = (_dotsController.value - delay) % 1.0;
+          final scale = t < 0.5
+              ? 0.6 + (t / 0.5) * 0.4
+              : 0.6 + ((1.0 - t) / 0.5) * 0.4;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: gold,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildLogoCard() {
+    return Container(
+      width: 140,
+      height: 140,
+      decoration: BoxDecoration(
+        color: ivory,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: gold.withOpacity(0.15),
+            blurRadius: 30,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [maroon.withOpacity(0.10), maroon.withOpacity(0.02)],
+                ),
+              ),
+              child: Image.asset(
+                'assets/kentucky_logo.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.restaurant_menu_rounded,
+                  color: maroon,
+                  size: 56,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: ClipPath(
+              clipper: _CornerFoldClipper(),
+              child: Container(
+                width: _foldSize.value,
+                height: _foldSize.value,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      maroon.withOpacity(0.25),
+                      maroon.withOpacity(0.08),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CornerFoldClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.moveTo(size.width, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
