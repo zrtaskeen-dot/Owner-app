@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Enter your email';
     if (!_emailRegex.hasMatch(v)) {
-      return 'Use a valid Gmail, Yahoo, Hotmail or Outlook email';
+      return 'Use Gmail, Yahoo, Hotmail or Outlook';
     }
     return null;
   }
@@ -153,7 +153,6 @@ class _LoginScreenState extends State<LoginScreen> {
         {'emailVerified': true},
       );
 
-      //  activity log
       try {
         final ownerName =
             (doc.data()?['name'] ??
@@ -256,8 +255,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             () => _obscurePassword = !_obscurePassword,
                           ),
                         ),
-                        validator: (v) => v != null && v.length < 6
-                            ? 'Min 6 characters'
+                        validator: (v) => v != null && v.length < 8
+                            ? 'Min 8 characters'
                             : null,
                       ),
 
@@ -325,7 +324,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-
+                        
                               },
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
@@ -442,7 +441,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
   }) {
-
+   
     OutlineInputBorder box(Color color, [double width = 1.0]) =>
         OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
