@@ -1,10 +1,98 @@
+// ignore_for_file: avoid_types_as_parameter_names, unused_field
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../logic/feedback_logic.dart';
-import '../repository/feedback_repository.dart';
+
+class FeedbackModel {
+  final String id;
+  final String orderId;
+  final String message;
+  final int rating;
+  final DateTime createdAt;
+
+  FeedbackModel({
+    required this.id,
+    required this.orderId,
+    required this.message,
+    required this.rating,
+    required this.createdAt,
+  });
+
+  factory FeedbackModel.fromDoc(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return FeedbackModel(
+      id: doc.id,
+      orderId: (d['orderId'] ?? '').toString(),
+      message: (d['comment'] ?? '').toString(),
+      rating: ((d['rating'] ?? 0) as num).toInt(),
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+class FeedbackRepository {
+  final _collection = FirebaseFirestore.instance.collection('reviews');
+
+  Stream<List<FeedbackModel>> getFeedbackStreamOrdered({int limit = 30}) {
+    return _collection
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => FeedbackModel.fromDoc(d)).toList());
+  }
+
+  Stream<List<FeedbackModel>> getFeedbackStreamUnordered() {
+    return _collection
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => FeedbackModel.fromDoc(d)).toList());
+  }
+
+  Future<Map<String, String>> getOrderInfo(String orderId) async {
+    if (orderId.isEmpty) return {};
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .get();
+      if (!doc.exists) return {};
+      final d = doc.data() as Map<String, dynamic>;
+
+      final rawName = (d['customerName'] ?? d['customer_name'] ?? '')
+          .toString()
+          .trim();
+
+      return {
+        'customerName': rawName.isEmpty ? 'Anonymous' : rawName,
+        'branchId': (d['branchId'] ?? '').toString(),
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+}
+
+class FeedbackService {
+  final FeedbackRepository _repo = FeedbackRepository();
+
+  Stream<List<FeedbackModel>> get feedbackStreamOrdered =>
+      _repo.getFeedbackStreamOrdered();
+
+  Stream<List<FeedbackModel>> get feedbackStreamUnordered =>
+      _repo.getFeedbackStreamUnordered();
+
+  Future<Map<String, String>> getOrderInfo(String orderId) =>
+      _repo.getOrderInfo(orderId);
+
+  double calculateAverageRating(List<FeedbackModel> feedbacks) {
+    final ratedItems = feedbacks.where((f) => f.rating > 0).toList();
+    if (ratedItems.isEmpty) return 0;
+    final total = ratedItems.fold<double>(0, (sum, f) => sum + f.rating);
+    return total / ratedItems.length;
+  }
+}
 
 class FeedbackTab extends StatefulWidget {
-  const FeedbackTab({Key? key}) : super(key: key);
+  const FeedbackTab({super.key});
 
   @override
   State<FeedbackTab> createState() => _FeedbackTabState();
@@ -21,25 +109,21 @@ class _ReviewDisplayInfo {
 class _FeedbackTabState extends State<FeedbackTab> {
   final FeedbackService _feedbackService = FeedbackService();
 
-  // caches so we don't re-query Firestore for the same order/branch repeatedly
   final Map<String, String> _nameCache = {};
   final Map<String, Future<String>> _branchNameFutures = {};
 
-  int? _ratingFilter; // null = All
+  int? _ratingFilter;
   _TimeFilter _timeFilter = _TimeFilter.allTime;
 
-  // ── Theme — Cream background + Light Ivory Cards + Maroon Accent ──
-  static const bgColor = Color(0xFFFCF8DD);
-  static const cardColor = Color(0xFFFFFFF0); // light ivory/cream card
-  static const maroon = Color(0xFFA70000); // brand maroon (accents only) — unified
-  static const gold = Color(0xFFFFC107); // attractive gold for stars
+  static const bgColor = Colors.white;
+  static const cardColor = Color(0xFFFFFDFA);
+  static const maroon = Color(0xFFA70000);
+  static const primary = Color(0xFFFF8A00);
+  static const gold = Color(0xFFFFC107);
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
-  static const borderColor = Color(0xFFEDE6D6);
+  static const borderColor = Color(0x33A70000);
 
-  // ════════════════════════════════════════════════════════════
-  // Combined lookup: customerName (via orderId) + branchName (via branchId)
-  // ════════════════════════════════════════════════════════════
   Future<_ReviewDisplayInfo> _loadReviewInfo(FeedbackModel f) async {
     final orderInfo = await _feedbackService.getOrderInfo(f.orderId);
     final customerName = (orderInfo['customerName'] ?? 'Anonymous');
@@ -114,9 +198,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // HEADER — ab Team tab jesa structure (icon black + title + subtitle)
-  // ════════════════════════════════════════════════════════════
   Widget _tabHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -152,9 +233,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // MAIN CONTENT
-  // ════════════════════════════════════════════════════════════
   Widget _feedbackContent(List<FeedbackModel> allFeedbacks) {
     final avgRating = _feedbackService.calculateAverageRating(allFeedbacks);
     final totalReviews = allFeedbacks.length;
@@ -182,7 +260,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
             child: Center(
               child: Text(
                 'No reviews match your filters',
-                style: TextStyle(color: textDark.withOpacity(0.5), fontSize: 12.5),
+                style: TextStyle(color: textDark.withValues(alpha: 0.5), fontSize: 12.5),
               ),
             ),
           )
@@ -217,9 +295,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     }).toList();
   }
 
-  // ════════════════════════════════════════════════════════════
-  // SUMMARY CARD (avg rating + breakdown) — total-reviews circle removed
-  // ════════════════════════════════════════════════════════════
   Widget _summaryCard(double avgRating, int totalReviews, Map<int, int> breakdown) {
     final maxCount = breakdown.values.fold<int>(0, (a, b) => a > b ? a : b).clamp(1, 1 << 30);
 
@@ -234,7 +309,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left — big average number + stars
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -260,12 +334,11 @@ class _FeedbackTabState extends State<FeedbackTab> {
               const SizedBox(height: 2),
               Text(
                 'Based on $totalReviews',
-                style: TextStyle(color: textDark.withOpacity(0.5), fontSize: 9.5),
+                style: TextStyle(color: textDark.withValues(alpha: 0.5), fontSize: 9.5),
               ),
             ],
           ),
           const SizedBox(width: 14),
-          // Right — breakdown bars
           Expanded(
             child: Column(
               children: [5, 4, 3, 2, 1].map((star) {
@@ -277,7 +350,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                     children: [
                       Text(
                         '$star',
-                        style: TextStyle(color: textDark.withOpacity(0.6), fontSize: 10),
+                        style: TextStyle(color: textDark.withValues(alpha: 0.6), fontSize: 10),
                       ),
                       const SizedBox(width: 3),
                       const Icon(Icons.star_rounded, color: gold, size: 10),
@@ -288,7 +361,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                           child: LinearProgressIndicator(
                             value: ratio,
                             minHeight: 5,
-                            backgroundColor: maroon.withOpacity(0.08),
+                            backgroundColor: maroon.withValues(alpha: 0.08),
                             valueColor: const AlwaysStoppedAnimation(maroon),
                           ),
                         ),
@@ -299,7 +372,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                         child: Text(
                           '$count',
                           textAlign: TextAlign.right,
-                          style: TextStyle(color: textDark.withOpacity(0.6), fontSize: 10),
+                          style: TextStyle(color: textDark.withValues(alpha: 0.6), fontSize: 10),
                         ),
                       ),
                     ],
@@ -313,9 +386,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // TIME FILTER (search box removed)
-  // ════════════════════════════════════════════════════════════
   Widget _timeFilterRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -364,9 +434,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     }
   }
 
-  // ════════════════════════════════════════════════════════════
-  // RATING FILTER CHIPS
-  // ════════════════════════════════════════════════════════════
   Widget _ratingFilterChips() {
     final options = <int?>[null, 5, 4, 3, 2, 1];
     return SizedBox(
@@ -374,7 +441,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: options.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final value = options[i];
           final selected = _ratingFilter == value;
@@ -401,7 +468,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                   Text(
                     label,
                     style: TextStyle(
-                      color: selected ? Colors.white : textDark.withOpacity(0.7),
+                      color: selected ? Colors.white : textDark.withValues(alpha: 0.7),
                       fontSize: 11.5,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
@@ -415,9 +482,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // REVIEW CARD
-  // ════════════════════════════════════════════════════════════
   Widget _reviewCard(FeedbackModel f) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -444,7 +508,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: maroon.withOpacity(0.1),
+                    backgroundColor: maroon.withValues(alpha: 0.1),
                     child: Text(
                       initial,
                       style: const TextStyle(color: maroon, fontWeight: FontWeight.bold, fontSize: 14),
@@ -462,11 +526,11 @@ class _FeedbackTabState extends State<FeedbackTab> {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Icon(Icons.receipt_long_rounded, size: 11, color: textDark.withOpacity(0.4)),
+                            Icon(Icons.receipt_long_rounded, size: 11, color: textDark.withValues(alpha: 0.4)),
                             const SizedBox(width: 3),
                             Text(
                               'Order ID: #${_shortOrderId(f.orderId)}',
-                              style: TextStyle(color: textDark.withOpacity(0.5), fontSize: 10.5),
+                              style: TextStyle(color: textDark.withValues(alpha: 0.5), fontSize: 10.5),
                             ),
                           ],
                         ),
@@ -474,9 +538,9 @@ class _FeedbackTabState extends State<FeedbackTab> {
                           const SizedBox(height: 1),
                           Row(
                             children: [
-                              Icon(Icons.storefront_rounded, size: 11, color: textDark.withOpacity(0.4)),
+                              Icon(Icons.storefront_rounded, size: 11, color: textDark.withValues(alpha: 0.4)),
                               const SizedBox(width: 3),
-                              Text(branch, style: TextStyle(color: textDark.withOpacity(0.5), fontSize: 10.5)),
+                              Text(branch, style: TextStyle(color: textDark.withValues(alpha: 0.5), fontSize: 10.5)),
                             ],
                           ),
                         ],
@@ -500,7 +564,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                       const SizedBox(height: 3),
                       Text(
                         _formatDateTime(f.createdAt),
-                        style: TextStyle(color: textDark.withOpacity(0.4), fontSize: 9.5),
+                        style: TextStyle(color: textDark.withValues(alpha: 0.4), fontSize: 9.5),
                       ),
                     ],
                   ),
@@ -510,7 +574,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
                 const SizedBox(height: 8),
                 Text(
                   f.message,
-                  style: TextStyle(color: textDark.withOpacity(0.75), fontSize: 12, height: 1.3),
+                  style: TextStyle(color: textDark.withValues(alpha: 0.75), fontSize: 12, height: 1.3),
                 ),
               ],
             ],
@@ -535,9 +599,6 @@ class _FeedbackTabState extends State<FeedbackTab> {
     return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour12:$minute $period';
   }
 
-  // ════════════════════════════════════════════════════════════
-  // EMPTY / ERROR STATES
-  // ════════════════════════════════════════════════════════════
   Widget _errorBody(String msg) {
     return Center(
       child: Padding(
@@ -550,7 +611,7 @@ class _FeedbackTabState extends State<FeedbackTab> {
             Text(
               msg,
               textAlign: TextAlign.center,
-              style: TextStyle(color: textDark.withOpacity(0.7), fontSize: 12.5),
+              style: TextStyle(color: textDark.withValues(alpha: 0.7), fontSize: 12.5),
             ),
           ],
         ),
@@ -563,9 +624,9 @@ class _FeedbackTabState extends State<FeedbackTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.star_outline_rounded, color: maroon.withOpacity(0.25), size: 50),
+          Icon(Icons.star_outline_rounded, color: maroon.withValues(alpha: 0.25), size: 50),
           const SizedBox(height: 10),
-          Text(msg, style: TextStyle(color: textDark.withOpacity(0.4), fontSize: 13)),
+          Text(msg, style: TextStyle(color: textDark.withValues(alpha: 0.4), fontSize: 13)),
         ],
       ),
     );

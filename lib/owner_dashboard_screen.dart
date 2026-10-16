@@ -1,14 +1,85 @@
+// ignore_for_file: avoid_print, unused_field
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'logic/dashboard_logic.dart';
 import 'activity_log.dart';
 import 'team.dart';
 import 'feedback.dart';
 import 'profile.dart';
 
+class DashboardRepository {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot> fetchRawOrdersSnapshot() {
+    try {
+      return _firestore.collection('orders').snapshots();
+    } catch (e) {
+      print('Repository - fetchRawOrdersSnapshot error: $e');
+      rethrow;
+    }
+  }
+
+  Future<QuerySnapshot> fetchRawOrdersFuture() {
+    try {
+      return _firestore.collection('orders').get();
+    } catch (e) {
+      print('Repository - fetchRawOrdersFuture error: $e');
+      rethrow;
+    }
+  }
+
+  
+  Stream<QuerySnapshot> fetchCollectionSnapshot(String path) {
+    try {
+      return _firestore.collection(path).snapshots();
+    } catch (e) {
+      print('Repository - fetchCollectionSnapshot($path) error: $e');
+      rethrow;
+    }
+  }
+
+  
+  Stream<DocumentSnapshot> fetchRestaurantDocument() {
+    try {
+      return _firestore
+          .collection('restaurant_info')
+          .doc('main_branch') 
+          .snapshots();
+    } catch (e) {
+      print('Repository - fetchRestaurantDocument error: $e');
+      rethrow;
+    }
+  }
+
+  
+  Stream<QuerySnapshot> fetchAllBranchesSnapshot() {
+    try {
+      return _firestore.collection('restaurant_info').snapshots();
+    } catch (e) {
+      print('Repository - fetchAllBranchesSnapshot error: $e');
+      rethrow;
+    }
+  }
+}
+
+class DashboardController {
+  final DashboardRepository _repository = DashboardRepository();
+
+  
+  Stream<QuerySnapshot> get ordersStream =>
+      _repository.fetchRawOrdersSnapshot();
+
+
+  Stream<QuerySnapshot> getCollectionStream(String path) =>
+      _repository.fetchCollectionSnapshot(path);
+
+  
+  Stream<DocumentSnapshot> get restaurantInfoStream =>
+      _repository.fetchRestaurantDocument();
+}
+
 class OwnerDashboardScreen extends StatefulWidget {
-  const OwnerDashboardScreen({Key? key}) : super(key: key);
+  const OwnerDashboardScreen({super.key});
 
   @override
   State<OwnerDashboardScreen> createState() => _OwnerDashboardScreenState();
@@ -21,16 +92,20 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   String? _selectedBranchId;
   String _selectedBranchName = 'All Branches';
 
-  // ── Custom date range filter (null = All Time / no filter) ──
+  
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
 
-  // ── Palette: Cream Background + Ivory Cards (#FFFFF0) + Maroon Outlines ──
-  static const bgColor = Color(0xFFFCF8DD);
+  static const bgColor =
+      Colors.white; 
   static const cardColor = Color(
-    0xFFFFFFF0,
-  ); // Light cream / Ivory card background
-  static const maroon = Color(0xFFA70000); // Brand maroon (unified across app)
+    0xFFFFFDFA,
+  ); 
+  static const maroon = Color(0xFFA70000);
+  static const primary = Color(0xFFFF8A00); 
+  static const lightMaroonBorder = Color(
+    0x33A70000,
+  ); 
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
 
@@ -58,9 +133,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // BOTTOM NAVIGATION (background + selected/unselected icons: maroon)
-  // ════════════════════════════════════════════════════════════
+  
   Widget _buildBottomNav() {
     const items = [
       {'icon': Icons.dashboard_rounded, 'label': 'Dashboard'},
@@ -92,7 +165,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: selected
-                        ? Colors.white.withOpacity(0.18)
+                        ? Colors.white.withValues(alpha: 0.18)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -103,7 +176,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                         items[i]['icon'] as IconData,
                         color: selected
                             ? Colors.white
-                            : Colors.white.withOpacity(0.6),
+                            : Colors.white.withValues(alpha: 0.6),
                         size: 24,
                       ),
                       const SizedBox(height: 4),
@@ -112,7 +185,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                         style: TextStyle(
                           color: selected
                               ? Colors.white
-                              : Colors.white.withOpacity(0.6),
+                              : Colors.white.withValues(alpha: 0.6),
                           fontSize: 11,
                           fontWeight: selected
                               ? FontWeight.bold
@@ -130,9 +203,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // BRANCH DROPDOWN HEADER
-  // ════════════════════════════════════════════════════════════
+  
   Widget _buildBranchHeader() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -150,7 +221,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: maroon.withOpacity(0.3)),
+                border: Border.all(color: lightMaroonBorder),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
@@ -164,7 +235,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: maroon.withOpacity(0.08),
+                      color: maroon.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -181,7 +252,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                         Text(
                           'BRANCH',
                           style: TextStyle(
-                            color: textDark.withOpacity(0.6),
+                            color: textDark.withValues(alpha: 0.6),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1,
@@ -293,9 +364,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // DATE RANGE FILTER (replaces Today/Week/Month/All chips)
-  // ════════════════════════════════════════════════════════════
+  
   bool get _hasCustomRange => _rangeStart != null && _rangeEnd != null;
 
   String _formatDate(DateTime d) {
@@ -340,10 +409,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     return !dt.isBefore(startOfDay) && !dt.isAfter(endOfDay);
   }
 
-  // Orders may store their date under different field names depending on
-  // how they were created — this checks the common ones so the filter
-  // works regardless. If your orders use a different field name, add it
-  // to this list.
+  
   DateTime? _extractOrderDate(Map<String, dynamic> d) {
     final raw =
         d['createdAt'] ??
@@ -363,8 +429,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     });
   }
 
-  // Single, themed date picker restricted so no future date (tomorrow
-  // onward) can ever be picked.
+ 
   Future<DateTime?> _showThemedDatePicker(DateTime initial) {
     final today = DateTime.now();
     final safeInitial = initial.isAfter(today) ? today : initial;
@@ -403,7 +468,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: maroon.withOpacity(0.25)),
+          border: Border.all(color: lightMaroonBorder),
         ),
         child: Row(
           children: [
@@ -439,8 +504,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  // Compact, app-themed bottom sheet with two simple date fields — no
-  // giant calendar and no connecting bar between the start/end dates.
+  
   void _openCustomRangeSheet() {
     DateTime? tempStart = _rangeStart;
     DateTime? tempEnd = _rangeEnd;
@@ -519,7 +583,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(
-                                  color: maroon.withOpacity(0.4),
+                                  color: maroon.withValues(alpha: 0.4),
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -596,10 +660,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: _hasCustomRange ? maroon.withOpacity(0.08) : cardColor,
+          color: _hasCustomRange ? maroon.withValues(alpha: 0.08) : cardColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _hasCustomRange ? maroon : maroon.withOpacity(0.25),
+            color: _hasCustomRange ? maroon : lightMaroonBorder,
           ),
         ),
         child: Row(
@@ -610,7 +674,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               child: Text(
                 _rangeLabel(),
                 style: TextStyle(
-                  color: _hasCustomRange ? textDark : textDark.withOpacity(0.6),
+                  color: _hasCustomRange
+                      ? textDark
+                      : textDark.withValues(alpha: 0.6),
                   fontSize: 12,
                   fontWeight: _hasCustomRange
                       ? FontWeight.w700
@@ -632,7 +698,6 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-
   Widget _buildDashboardTab() {
     return StreamBuilder<QuerySnapshot>(
       stream: _controller.ordersStream,
@@ -650,7 +715,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           for (var doc in snap.data!.docs) {
             var d = doc.data() as Map<String, dynamic>;
 
-            // date range filter (replaces Today/Week/Month/All)
+           
             if (_hasCustomRange) {
               final orderDate = _extractOrderDate(d);
               if (orderDate == null || !_dateInRange(orderDate)) {
@@ -658,14 +723,25 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               }
             }
 
-            final status = (d['order_status'] ?? '').toString().toLowerCase();
-            final isVoid = status == 'cancelled' || status == 'rejected';
+            
+            final statuses = {
+              _normStatus(d['orderStatus']),
+              _normStatus(d['order_status']),
+            };
+            final isVoid = statuses.any(
+              (st) => const {
+                'cancelled',
+                'canceled',
+                'rejected',
+                'incomplete',
+                'undelivered',
+              }.contains(st),
+            );
             if (isVoid) continue;
 
             final amt = ((d['totalAmount'] ?? 0) as num).toDouble();
             final branchIdOfOrder = (d['branchId'] ?? '').toString();
 
-            // the summary card at the top respects the branch dropdown
             if (_selectedBranchId != null &&
                 branchIdOfOrder != _selectedBranchId) {
               continue;
@@ -731,22 +807,22 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   delegate: SliverChildListDelegate([
                     _buildStatCard(
                       'CUSTOMERS',
-                      'roleID',
+                      'roleId',
                       'R001',
                       Icons.person_rounded,
                       maroon,
                     ),
                     _buildStatCard(
                       'RIDERS',
-                      'role',
-                      'rider',
+                      'roleId',
+                      'R002',
                       Icons.directions_bike,
                       maroon,
                     ),
                     _buildStatCard(
                       'MANAGERS',
-                      'role',
-                      'manager',
+                      'roleId',
+                      'R003',
                       Icons.badge_rounded,
                       maroon,
                     ),
@@ -792,7 +868,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: maroon.withOpacity(0.25)),
+        border: Border.all(color: lightMaroonBorder),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
       ),
       child: Column(
@@ -816,7 +892,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     Text(
                       '(Online + COD) • ${_hasCustomRange ? 'Selected Range' : 'All Time'}',
                       style: TextStyle(
-                        color: textDark.withOpacity(0.6),
+                        color: textDark.withValues(alpha: 0.6),
                         fontSize: 11,
                       ),
                     ),
@@ -837,9 +913,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: maroon.withOpacity(0.08),
+                  color: maroon.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
-                  border: Border.all(color: maroon.withOpacity(0.2)),
+                  border: Border.all(color: maroon.withValues(alpha: 0.2)),
                 ),
                 child: const Icon(
                   Icons.account_balance_wallet_rounded,
@@ -895,7 +971,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   flex: total > 0
                       ? (cod / total * 100).round().clamp(1, 99)
                       : 1,
-                  child: Container(height: 6, color: maroon.withOpacity(0.2)),
+                  child: Container(
+                    height: 6,
+                    color: primary.withValues(alpha: 0.3),
+                  ),
                 ),
               ],
             ),
@@ -907,21 +986,21 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               Text(
                 'Rs. ${online.toStringAsFixed(0)} Online',
                 style: TextStyle(
-                  color: textDark.withOpacity(0.7),
+                  color: textDark.withValues(alpha: 0.7),
                   fontSize: 12,
                 ),
               ),
               Text(
                 'Rs. ${cod.toStringAsFixed(0)} COD',
                 style: TextStyle(
-                  color: textDark.withOpacity(0.7),
+                  color: textDark.withValues(alpha: 0.7),
                   fontSize: 12,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Divider(color: textDark.withOpacity(0.15), height: 1),
+          Divider(color: textDark.withValues(alpha: 0.15), height: 1),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -940,12 +1019,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           ),
           if (easypaisaOrders > 0 || jazzcashOrders > 0) ...[
             const SizedBox(height: 12),
-            Divider(color: textDark.withOpacity(0.15), height: 1),
+            Divider(color: textDark.withValues(alpha: 0.15), height: 1),
             const SizedBox(height: 12),
             Text(
               'ONLINE BREAKDOWN',
               style: TextStyle(
-                color: textDark.withOpacity(0.6),
+                color: textDark.withValues(alpha: 0.6),
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1,
@@ -985,9 +1064,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: maroon.withOpacity(0.06),
+          color: maroon.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: maroon.withOpacity(0.15)),
+          border: Border.all(color: lightMaroonBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1006,7 +1085,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    color: textDark.withOpacity(0.7),
+                    color: textDark.withValues(alpha: 0.7),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1024,7 +1103,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
             Text(
               '$count orders',
-              style: TextStyle(color: textDark.withOpacity(0.55), fontSize: 10),
+              style: TextStyle(
+                color: textDark.withValues(alpha: 0.55),
+                fontSize: 10,
+              ),
             ),
           ],
         ),
@@ -1059,7 +1141,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: textDark.withOpacity(0.6),
+                    color: textDark.withValues(alpha: 0.6),
                     fontSize: 10,
                   ),
                 ),
@@ -1076,8 +1158,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     String roleField,
     String roleValue,
     IconData icon,
-    Color accent,
-  ) {
+    Color accent, {
+    VoidCallback? onTap,
+  }) {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('users')
         .where(roleField, isEqualTo: roleValue);
@@ -1095,12 +1178,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ? '...'
             : '${snap.data?.docs.length ?? 0}';
 
-        return Container(
+        final card = Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: maroon.withOpacity(0.25)),
+            border: Border.all(color: lightMaroonBorder),
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
           ),
           child: Column(
@@ -1116,7 +1199,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: textDark.withOpacity(0.7),
+                        color: textDark.withValues(alpha: 0.7),
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1149,6 +1232,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ],
           ),
         );
+
+        if (onTap == null) return card;
+        return InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: card,
+        );
       },
     );
   }
@@ -1170,7 +1260,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: maroon.withOpacity(0.25)),
+            border: Border.all(color: lightMaroonBorder),
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
           ),
           child: Column(
@@ -1225,7 +1315,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: maroon.withOpacity(0.25)),
+            border: Border.all(color: lightMaroonBorder),
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
           ),
           child: Column(
@@ -1247,7 +1337,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                         ? '${snap.data!.docs.length} Branch${snap.data!.docs.length == 1 ? '' : 'es'}'
                         : '',
                     style: TextStyle(
-                      color: textDark.withOpacity(0.7),
+                      color: textDark.withValues(alpha: 0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1261,13 +1351,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 Text(
                   'No branches found',
                   style: TextStyle(
-                    color: textDark.withOpacity(0.6),
+                    color: textDark.withValues(alpha: 0.6),
                     fontSize: 13,
                   ),
                 )
               else
                 ...List.generate(snap.data!.docs.length, (i) {
                   final d = snap.data!.docs[i].data() as Map<String, dynamic>;
+                  final branchId = snap.data!.docs[i].id;
                   final name = (d['branchName'] ?? 'Branch ${i + 1}')
                       .toString();
                   final address = (d['address'] ?? '').toString();
@@ -1276,70 +1367,98 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   return Column(
                     children: [
                       if (i > 0)
-                        Divider(color: textDark.withOpacity(0.15), height: 20),
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: maroon.withOpacity(0.08),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.storefront_rounded,
-                                color: maroon,
-                                size: 18,
-                              ),
+                        Divider(
+                          color: textDark.withValues(alpha: 0.15),
+                          height: 20,
+                        ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => _BranchOrdersScreen(
+                              branchId: branchId,
+                              branchName: name,
+                              rangeStart: _rangeStart,
+                              rangeEnd: _rangeEnd,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name,
-                                  style: const TextStyle(
-                                    color: textDark,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: maroon.withValues(alpha: 0.08),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.storefront_rounded,
+                                    color: maroon,
+                                    size: 18,
                                   ),
                                 ),
-                                if (address.isNotEmpty)
-                                  Text(
-                                    address,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: textDark.withOpacity(0.6),
-                                      fontSize: 11,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: const TextStyle(
+                                        color: textDark,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (address.isNotEmpty)
+                                      Text(
+                                        address,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: textDark.withValues(
+                                            alpha: 0.6,
+                                          ),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (timing.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: maroon.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    timing,
+                                    style: const TextStyle(
+                                      color: maroon,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                              ],
-                            ),
-                          ),
-                          if (timing.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: maroon.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                timing,
-                                style: const TextStyle(
-                                  color: maroon,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
                                 ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: maroon,
+                                size: 20,
                               ),
-                            ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   );
@@ -1369,8 +1488,503 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: maroon.withOpacity(0.12),
+        color: maroon.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+}
+
+
+String _normStatus(dynamic v) => (v ?? '').toString().toLowerCase().trim();
+
+class _BranchOrdersScreen extends StatefulWidget {
+  final String branchId;
+  final String branchName;
+  final DateTime? rangeStart;
+  final DateTime? rangeEnd;
+
+  const _BranchOrdersScreen({
+    required this.branchId,
+    required this.branchName,
+    this.rangeStart,
+    this.rangeEnd,
+  });
+
+  @override
+  State<_BranchOrdersScreen> createState() => _BranchOrdersScreenState();
+}
+
+class _BranchOrdersScreenState extends State<_BranchOrdersScreen> {
+  static const Color maroon = Color(0xFFA70000);
+  static const Color orange = Color(0xFFFF8A00);
+  static const Color green = Color(0xFF2E7D32);
+  static const Color cardColor = Color(0xFFFFFDFA);
+  static const Color border = Color(0x33A70000);
+  static const Color muted = Colors.black54;
+
+  String _selected = 'incomplete'; 
+
+  late final Stream<QuerySnapshot> _stream = FirebaseFirestore.instance
+      .collection('orders')
+      .where('branchId', isEqualTo: widget.branchId)
+      .snapshots();
+
+  bool get _hasRange => widget.rangeStart != null && widget.rangeEnd != null;
+
+  DateTime? _orderDate(Map<String, dynamic> d) {
+    final raw =
+        d['createdAt'] ??
+        d['orderDate'] ??
+        d['timestamp'] ??
+        d['created_at'] ??
+        d['orderTime'];
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    return null;
+  }
+
+  bool _inRange(DateTime? dt) {
+    if (!_hasRange) return true;
+    if (dt == null) return false;
+    final s = widget.rangeStart!;
+    final e = widget.rangeEnd!;
+    final start = DateTime(s.year, s.month, s.day);
+    final end = DateTime(e.year, e.month, e.day, 23, 59, 59, 999);
+    return !dt.isBefore(start) && !dt.isAfter(end);
+  }
+
+  String _bucket(Map<String, dynamic> d) {
+    final st = {_normStatus(d['orderStatus']), _normStatus(d['order_status'])};
+    if (st.contains('cancelled') || st.contains('canceled')) return 'cancelled';
+    if (st.contains('incomplete')) return 'incomplete';
+    if (st.contains('undelivered') || st.contains('rejected')) return 'other';
+    if (st.contains('delivered')) return 'completed';
+    return 'other';
+  }
+
+  String _fmtDate(DateTime d) {
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${d.day} ${m[d.month - 1]} ${d.year}';
+  }
+
+  String _fmtDateTime(DateTime d) {
+    final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final mm = d.minute.toString().padLeft(2, '0');
+    return '${_fmtDate(d)}, $h:$mm ${d.hour >= 12 ? 'PM' : 'AM'}';
+  }
+
+  String _reasonOf(Map<String, dynamic> d, bool incomplete) {
+    if (incomplete) {
+      final r = (d['incompleteReason'] ?? '').toString().trim();
+      return r.isNotEmpty ? r : 'No reason recorded.';
+    }
+    for (final key in const [
+      'cancelReason',
+      'cancellationReason',
+      'cancelledReason',
+    ]) {
+      final r = (d[key] ?? '').toString().trim();
+      if (r.isNotEmpty) return r;
+    }
+    return (d['cancelledBy'] ?? '').toString() == 'customer'
+        ? 'Cancelled by the customer.'
+        : 'Cancelled by the manager (invalid payment receipt).';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: maroon,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.branchName,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _stream,
+        builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(
+              child: Text(
+                'Firestore Error: ${snap.error}',
+                style: const TextStyle(fontSize: 13),
+              ),
+            );
+          }
+          if (!snap.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: maroon),
+            );
+          }
+
+          int total = 0, completed = 0;
+          final incomplete = <QueryDocumentSnapshot>[];
+          final cancelled = <QueryDocumentSnapshot>[];
+
+          for (final doc in snap.data!.docs) {
+            final d = doc.data() as Map<String, dynamic>;
+            if (!_inRange(_orderDate(d))) continue;
+            total++;
+            switch (_bucket(d)) {
+              case 'completed':
+                completed++;
+                break;
+              case 'incomplete':
+                incomplete.add(doc);
+                break;
+              case 'cancelled':
+                cancelled.add(doc);
+                break;
+            }
+          }
+
+          final showing = _selected == 'incomplete' ? incomplete : cancelled;
+          showing.sort((a, b) {
+            final da = _orderDate(a.data() as Map<String, dynamic>);
+            final db = _orderDate(b.data() as Map<String, dynamic>);
+            if (da == null && db == null) return 0;
+            if (da == null) return 1;
+            if (db == null) return -1;
+            return db.compareTo(da); 
+          });
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+            children: [
+              Text(
+                _hasRange
+                    ? '${_fmtDate(widget.rangeStart!)}  →  ${_fmtDate(widget.rangeEnd!)}'
+                    : 'All Time',
+                style: const TextStyle(
+                  color: muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _statTile(
+                    icon: Icons.receipt_long_rounded,
+                    color: maroon,
+                    label: 'Total Orders',
+                    count: total,
+                  ),
+                  const SizedBox(width: 12),
+                  _statTile(
+                    icon: Icons.check_circle_rounded,
+                    color: green,
+                    label: 'Completed',
+                    count: completed,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _statTile(
+                    icon: Icons.error_outline_rounded,
+                    color: orange,
+                    label: 'Incomplete',
+                    count: incomplete.length,
+                    selected: _selected == 'incomplete',
+                    onTap: () => setState(() => _selected = 'incomplete'),
+                  ),
+                  const SizedBox(width: 12),
+                  _statTile(
+                    icon: Icons.cancel_outlined,
+                    color: maroon,
+                    label: 'Cancelled',
+                    count: cancelled.length,
+                    selected: _selected == 'cancelled',
+                    onTap: () => setState(() => _selected = 'cancelled'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Text(
+                    _selected == 'incomplete'
+                        ? 'Incomplete Orders'
+                        : 'Cancelled Orders',
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: maroon.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${showing.length}',
+                      style: const TextStyle(
+                        color: maroon,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (showing.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Text(
+                      _selected == 'incomplete'
+                          ? 'No incomplete orders'
+                          : 'No cancelled orders',
+                      style: const TextStyle(color: muted, fontSize: 14),
+                    ),
+                  ),
+                )
+              else
+                ...showing.map(
+                  (doc) => _orderCard(
+                    doc,
+                    doc.data() as Map<String, dynamic>,
+                    _selected == 'incomplete',
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _statTile({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required int count,
+    bool selected = false,
+    VoidCallback? onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: selected ? color.withValues(alpha: 0.06) : cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? color : border,
+              width: selected ? 1.6 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: muted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: muted),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: Colors.black87, fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderCard(
+    QueryDocumentSnapshot doc,
+    Map<String, dynamic> d,
+    bool incomplete,
+  ) {
+    final placed = _orderDate(d);
+    final eventRaw = d[incomplete ? 'incompleteAt' : 'cancelledAt'];
+    final eventAt = eventRaw is Timestamp ? eventRaw.toDate() : null;
+    final amt = d['totalAmount'] is num
+        ? (d['totalAmount'] as num).toDouble()
+        : 0.0;
+    final deliveryTime = (d['deliveryTime'] ?? '').toString().trim();
+    final customer = (d['customerName'] ?? d['userName'] ?? d['name'] ?? '')
+        .toString()
+        .trim();
+    final shortId = doc.id.length > 6
+        ? doc.id.substring(0, 6).toUpperCase()
+        : doc.id.toUpperCase();
+    final accent = incomplete ? orange : maroon;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border),
+        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 6)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Order #$shortId',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Text(
+                'Rs. ${amt.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: maroon,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          if (customer.isNotEmpty)
+            _infoRow(Icons.person_outline_rounded, customer),
+          if (placed != null)
+            _infoRow(
+              Icons.event_note_rounded,
+              'Placed: ${_fmtDateTime(placed)}',
+            ),
+          if (deliveryTime.isNotEmpty)
+            _infoRow(Icons.schedule_rounded, 'Delivery: $deliveryTime'),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              color: const Color(0xFFF7F4F1),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(width: 4, color: accent),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              incomplete
+                                  ? 'INCOMPLETE REASON'
+                                  : 'CANCELLATION REASON',
+                              style: const TextStyle(
+                                color: muted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _reasonOf(d, incomplete),
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 13,
+                                height: 1.35,
+                              ),
+                            ),
+                            if (eventAt != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _fmtDateTime(eventAt),
+                                style: const TextStyle(
+                                  color: muted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

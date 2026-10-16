@@ -113,10 +113,7 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-  // ✅ Agar owner already logged in hai (Firebase Auth session zinda hai),
-  // to seedha Dashboard pe le jao — Login screen dobara nahi dikhani.
-  // Firebase Auth apne aap session device pe persist karta hai, is liye
-  // yeh sirf ek check hai, kuch save/load manually karne ki zaroorat nahi.
+  
   void _goToNextScreen() {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -124,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
       context,
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, animation, __) => FadeTransition(
+        pageBuilder: (_, animation, _) => FadeTransition(
           opacity: animation,
           child: user != null
               ? const OwnerDashboardScreen()
@@ -166,12 +163,12 @@ class _SplashScreenState extends State<SplashScreen>
                 Positioned(
                   top: -70,
                   left: -60,
-                  child: _glowCircle(220, cream.withOpacity(0.10)),
+                  child: _glowCircle(220, cream.withValues(alpha: 0.10)),
                 ),
                 Positioned(
                   bottom: -90,
                   right: -70,
-                  child: _glowCircle(260, gold.withOpacity(0.14)),
+                  child: _glowCircle(260, gold.withValues(alpha: 0.14)),
                 ),
               ],
             ),
@@ -227,7 +224,7 @@ class _SplashScreenState extends State<SplashScreen>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withOpacity(0.0)]),
+        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0.0)]),
       ),
     );
   }
@@ -272,12 +269,12 @@ class _SplashScreenState extends State<SplashScreen>
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.28),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: gold.withOpacity(0.15),
+            color: gold.withValues(alpha: 0.15),
             blurRadius: 30,
             spreadRadius: 2,
           ),
@@ -292,7 +289,7 @@ class _SplashScreenState extends State<SplashScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [maroon.withOpacity(0.10), maroon.withOpacity(0.02)],
+                  colors: [maroon.withValues(alpha: 0.10), maroon.withValues(alpha: 0.02)],
                 ),
               ),
               child: Image.asset(
@@ -319,8 +316,8 @@ class _SplashScreenState extends State<SplashScreen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      maroon.withOpacity(0.25),
-                      maroon.withOpacity(0.08),
+                      maroon.withValues(alpha: 0.25),
+                      maroon.withValues(alpha: 0.08),
                     ],
                   ),
                 ),

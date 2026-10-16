@@ -1,14 +1,71 @@
 import 'package:flutter/material.dart';
-import '../logic/activity_log_logic.dart';
-import '../repository/activity_log_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class ActivityLogModel {
+  final String action;
+  final String performedBy;
+  final String role;
+  final String details;
+  final String branch;
+  final DateTime createdAt;
+
+  ActivityLogModel({
+    required this.action,
+    required this.performedBy,
+    required this.role,
+    required this.details,
+    required this.branch,
+    required this.createdAt,
+  });
+
+  
+  factory ActivityLogModel.fromDoc(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return ActivityLogModel(
+      action: d['action'] ?? '',
+      performedBy: d['performedBy'] ?? 'Unknown',
+      role: d['role'] ?? '',
+      details: d['details'] ?? '',
+      branch: d['branch'] ?? '',
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+class ActivityLogRepository {
+  
+  final _collection = FirebaseFirestore.instance.collection('activity_logs');
+
+  Stream<List<ActivityLogModel>> getLogsStream({int limit = 50}) {
+    return _collection
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map(
+          (snap) => snap.docs.map((d) => ActivityLogModel.fromDoc(d)).toList(),
+        );
+  }
+}
+
+class ActivityLogService {
+  final ActivityLogRepository _repo = ActivityLogRepository();
+
+  Stream<List<ActivityLogModel>> get logsStream => _repo.getLogsStream();
+}
 
 class ActivityLogTab extends StatelessWidget {
-  const ActivityLogTab({Key? key}) : super(key: key);
+  const ActivityLogTab({super.key});
 
-  // ── Palette: Cream Background + Ivory Cards + Maroon Accents (Matching Dashboard) ──
-  static const bgColor = Color(0xFFFCF8DD);      // Cream background
-  static const cardColor = Color(0xFFFFFFF0);    // Ivory / light cream cards
-  static const maroon = Color(0xFFA70000);       // Brand maroon (role badge, accents)
+  static const bgColor =
+      Colors.white; 
+  static const cardColor = Color(
+    0xFFFFFDFA,
+  ); 
+  static const maroon = Color(0xFFA70000); 
+  static const primary = Color(0xFFFF8A00); 
+  static const lightMaroonBorder = Color(
+    0x33A70000,
+  ); 
   static const textDark = Colors.black;
   static const textMuted = Colors.black54;
 
@@ -51,7 +108,7 @@ class ActivityLogTab extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                     physics: const BouncingScrollPhysics(),
                     itemCount: logs.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, i) => _logCard(logs[i]),
                   );
                 },
@@ -65,13 +122,14 @@ class ActivityLogTab extends StatelessWidget {
 
   Widget _logCard(ActivityLogModel log) {
     final hasBranch = log.branch.isNotEmpty;
+    final hasRole = log.role.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: maroon.withOpacity(0.25)),
+        border: Border.all(color: lightMaroonBorder),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
       ),
       child: Row(
@@ -81,7 +139,7 @@ class ActivityLogTab extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: maroon.withOpacity(0.08),
+              color: maroon.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.history_rounded, color: maroon, size: 20),
@@ -103,30 +161,31 @@ class ActivityLogTab extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: maroon.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        log.role,
-                        style: const TextStyle(
-                          color: maroon,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    if (hasRole)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: maroon.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          log.role,
+                          style: const TextStyle(
+                            color: maroon,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   log.details,
-                  style: const TextStyle(
-                    color: textMuted,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: textMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -134,7 +193,7 @@ class ActivityLogTab extends StatelessWidget {
                   '${hasBranch ? ' | ${log.branch}' : ''}'
                   ' • ${_formatTime(log.createdAt)}',
                   style: TextStyle(
-                    color: textDark.withOpacity(0.4),
+                    color: textDark.withValues(alpha: 0.4),
                     fontSize: 11,
                   ),
                 ),
@@ -188,7 +247,11 @@ class ActivityLogTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 48),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Colors.red,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
               msg,
@@ -206,11 +269,14 @@ class ActivityLogTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: maroon.withOpacity(0.25), size: 56),
+          Icon(icon, color: maroon.withValues(alpha: 0.25), size: 56),
           const SizedBox(height: 12),
           Text(
             msg,
-            style: TextStyle(color: textDark.withOpacity(0.5), fontSize: 14),
+            style: TextStyle(
+              color: textDark.withValues(alpha: 0.5),
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -218,6 +284,14 @@ class ActivityLogTab extends StatelessWidget {
   }
 
   String _formatTime(DateTime dt) {
-    return '${dt.day}/${dt.month}/${dt.year} • ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    final pkt = dt.toUtc().add(const Duration(hours: 5));
+
+    final hour = pkt.hour == 0
+        ? 12
+        : (pkt.hour > 12 ? pkt.hour - 12 : pkt.hour);
+    final period = pkt.hour >= 12 ? 'PM' : 'AM';
+    final minute = pkt.minute.toString().padLeft(2, '0');
+
+    return '${pkt.day}/${pkt.month}/${pkt.year} • $hour:$minute $period';
   }
 }
