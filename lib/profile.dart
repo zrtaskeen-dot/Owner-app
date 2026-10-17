@@ -79,6 +79,24 @@ class ProfileService {
 }
 
 
+class _StripLeadingZeroFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text;
+    while (text.startsWith('0')) {
+      text = text.substring(1);
+    }
+    if (text == newValue.text) return newValue;
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
 class _CapitalizeWordsFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -128,7 +146,7 @@ class _ProfileTabState extends State<ProfileTab> {
   static const primary = Color(0xFFA70000); 
 
 
-  static const int _maxPhoneDigits = 11;
+  static const int _maxPhoneDigits = 10;
 
   static const _cloudName = 'dqjqkwwwh';
   static const _uploadPreset = 'rider_profiles';
@@ -136,15 +154,42 @@ class _ProfileTabState extends State<ProfileTab> {
   
   String _phoneDigits(String raw) {
     var digits = raw.replaceAll(RegExp(r'\D'), '');
-    if (digits.length > _maxPhoneDigits) {
-      // '+92xxxxxxxxxx' (12 digits) -> '0xxxxxxxxxx'
-      if (digits.startsWith('92') && digits.length == 12) {
-        digits = '0${digits.substring(2)}';
-      } else {
-        digits = digits.substring(digits.length - _maxPhoneDigits);
-      }
+    if (digits.startsWith('92') && digits.length > 10) {
+      digits = digits.substring(2);
     }
+    while (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+    if (digits.length > 10) return digits.substring(digits.length - 10);
     return digits;
+  }
+
+  String _displayPhone(String raw) {
+    final d = _phoneDigits(raw);
+    return d.length == 10 ? '+92$d' : raw;
+  }
+
+  void _showMaroonSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: primary,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      );
   }
 
   // Image picker
@@ -186,23 +231,10 @@ class _ProfileTabState extends State<ProfileTab> {
       }, SetOptions(merge: true));
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Profile photo updated',
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: primary,
-        ),
-      );
+      _showMaroonSnack('Profile photo updated');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to upload photo: $e'),
-          backgroundColor: Colors.black87,
-        ),
-      );
+      _showMaroonSnack('Failed to upload photo: $e');
     } finally {
       if (mounted) setState(() => _isUploadingPhoto = false);
     }
@@ -215,15 +247,7 @@ class _ProfileTabState extends State<ProfileTab> {
       await FirebaseAuth.instance.signOut();
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Logged out successfully',
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: primary,
-        ),
-      );
+      _showMaroonSnack('Logged out successfully');
 
      
       Navigator.of(
@@ -232,12 +256,7 @@ class _ProfileTabState extends State<ProfileTab> {
       ).pushNamedAndRemoveUntil('/', (route) => false);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Logout failed: $e'),
-            backgroundColor: Colors.black87,
-          ),
-        );
+        _showMaroonSnack('Logout failed: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoggingOut = false);
@@ -342,6 +361,7 @@ class _ProfileTabState extends State<ProfileTab> {
                         inputFormatters: isPhone
                             ? [
                                 FilteringTextInputFormatter.digitsOnly,
+                                _StripLeadingZeroFormatter(),
                                 LengthLimitingTextInputFormatter(
                                   _maxPhoneDigits,
                                 ),
@@ -358,7 +378,12 @@ class _ProfileTabState extends State<ProfileTab> {
                             color: Colors.black45,
                             size: 20,
                           ),
-                          hintText: 'Enter $fieldLabel',
+                          prefixText: isPhone ? '+92 ' : null,
+                          prefixStyle: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          hintText: isPhone ? '3001234567' : 'Enter $fieldLabel',
                           counterText: isPhone ? '' : null,
                           errorText: fieldError,
                           filled: true,
@@ -420,7 +445,19 @@ class _ProfileTabState extends State<ProfileTab> {
                                 elevation: 0,
                               ),
                               onPressed: () async {
-                                final newVal = controller.text.trim();
+                                final rawInput = controller.text.trim();
+
+                                if (isPhone && rawInput.length != 10) {
+                                  setDialogState(
+                                    () => fieldError =
+                                        'Enter exactly 10 digits after +92',
+                                  );
+                                  return;
+                                }
+
+                                final newVal = isPhone
+                                    ? '+92$rawInput'
+                                    : rawInput;
 
                                 if (newVal.isEmpty) {
                                   setDialogState(
@@ -446,22 +483,12 @@ class _ProfileTabState extends State<ProfileTab> {
                                   }
 
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        '$fieldLabel updated successfully',
-                                      ),
-                                      backgroundColor: primary,
-                                    ),
+                                  _showMaroonSnack(
+                                    '$fieldLabel updated successfully',
                                   );
                                 } catch (e) {
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Update failed: $e'),
-                                      backgroundColor: Colors.black87,
-                                    ),
-                                  );
+                                  _showMaroonSnack('Update failed: $e');
                                 }
                               },
                               child: const Text(
@@ -668,7 +695,7 @@ class _ProfileTabState extends State<ProfileTab> {
                         _profileFieldBox(
                           icon: Icons.phone_outlined,
                           label: 'Phone Number',
-                          value: profile.phone,
+                          value: _displayPhone(profile.phone),
                           onTap: () => _editField(
                             'phone',
                             'Phone Number',
